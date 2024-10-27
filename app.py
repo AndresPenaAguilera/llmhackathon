@@ -7,6 +7,9 @@ from audio_recorder_streamlit  import audio_recorder
 import speech_recognition as sr
 from io import BytesIO
 from create_db import create_and_insert_db
+from transformers import pipeline
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Llamar a la función para crear la base de datos e insertar los datos
 create_and_insert_db('customer_support_tickets.csv')
@@ -139,8 +142,8 @@ def show_users():
 
 # Interfaz principal
 st.title('JustAsk')
-
-
+st.write('Hello, I am JustAsk! I can help with bookings or any service questions you have. Let’s get started—what do you need help with today?')
+ 
 with st.sidebar:
     if not st.session_state['CODEGPT_API_KEY']:
         st.session_state['CODEGPT_API_KEY'] = st.text_input(
@@ -161,8 +164,6 @@ with st.sidebar:
     if st.button("Reset Chat"):
         reset_chat()
         
-
-
 def process_user_prompt(user_prompt: str):
     if user_prompt:
         # Mostrar mensaje del usuario
@@ -182,7 +183,7 @@ def process_user_prompt(user_prompt: str):
                     full_response += chunk
                     message_placeholder.markdown(full_response + "▌")
             else:  # Mistral
-                response = get_mistral_completion(user_prompt)
+                response = run_swarms(user_prompt, 0)#get_mistral_completion(user_prompt)
                 # Simular streaming
                 for chunk in stream_str(response):
                     full_response += chunk
@@ -205,6 +206,7 @@ if (st.session_state['provider'] == 'CodeGPT' and st.session_state['selected_age
     
     process_user_prompt(user_prompt)
     
+    
 def run_swarms(user_prompt: str, num_iterations: int):
     """
     Ejecuta un proceso iterativo para generar y validar respuestas basadas en la intención del usuario.
@@ -224,14 +226,14 @@ def run_swarms(user_prompt: str, num_iterations: int):
     context_data = agent_intent_definition(intetion)
     
     # Genera una respuesta basada en los datos de contexto.
-    answer = agent_response_generation(context_data)
+    answer = agent_response_generation(user_prompt, context_data, intetion)
     
     # Si se ha alcanzado el número máximo de iteraciones (3), devuelve la respuesta generada.
     if num_iterations == 3:
         return answer
     
     # Valida la respuesta generada.
-    answer_is_valid = agent_text_assistant_referee(answer)
+    answer_is_valid = agent_text_assistant_referee(user_prompt, context_data, answer)
     
     # Si la respuesta no es válida, refactoriza el mensaje del usuario y vuelve a ejecutar el proceso.
     if not answer_is_valid:
@@ -242,41 +244,109 @@ def agent_intent_definition(user_prompt: str):
     prompt = f"""
     <prompt>
         <question>{user_prompt}</question>
-        <context>Define the user's intention based on the provided prompt.</context>
-        <expected_response>The intention of the user is clearly identified.</expected_response>
+        <context>
+            The user has provided a prompt. Determine if the user's intention is related to a booking inquiry or a service question.
+            - Booking: Inquiries related to making, changing, or canceling reservations.
+            - Service Question: Inquiries related to the details, policies, or other aspects of the service provided.
+        </context>
+        <expected_response>
+            The user's intention is identified as either a booking inquiry or a service question.
+        </expected_response>
     </prompt>
     """
-    return prompt
+    
+    response = get_mistral_completion(prompt)
+    
+    return response
 
 def agent_context_data_retrieval(intention_prompt: str):
-    prompt = f"""
-    <prompt>
-        <question>{intention_prompt}</question>
-        <context>Retrieve relevant context data for the identified intention.</context>
-        <expected_response>Context data relevant to the user's intention is retrieved.</expected_response>
-    </prompt>
-    """
-    return prompt
+    
+    if not intention_prompt:
+        return None
+    
+    # Conectar a la base de datos SQLite
+    conn = sqlite3.connect('customer_support.db')
+    cursor = conn.cursor()
+    
+    # Determinar el tipo de problema basado en el prompt de intención
+    if "booking" in intention_prompt.lower():
+        issue_type = "Booking"
+    elif "service question" in intention_prompt.lower():
+        issue_type = "Service Question"
+    else:
+        issue_type = None
+    
+    # Recuperar datos de contexto relevantes de la base de datos
+    if issue_type:
+        cursor.execute('''
+            SELECT client, ticket_number, description
+            FROM tickets
+            WHERE issue_type = ?
+            LIMIT 2
+        ''', (issue_type,))
+        records = cursor.fetchall()
+    else:
+        records = []
+    
+    # Cerrar la conexión a la base de datos
+    conn.close()
+    
+    # Crear el prompt con los datos de contexto recuperados
+    context_data = "\n".join([f"Client: {record[0]}, Ticket Number: {record[1]}, Description: {record[2]}" for record in records])
+    
+    return context_data
 
-def agent_response_generation(user_prompt: str, context_data: str):
-    prompt = f"""
-    <prompt>
-        <question>{user_prompt}</question>
-        <context>{context_data}</context>
-        <expected_response>A comprehensive response is generated based on the context data.</expected_response>
-    </prompt>
-    """
-    return prompt
+def agent_response_generation(user_prompt: str, context_data: str, issue_type: str):
+     # Crear el prompt con los datos de contexto recuperados
+    if issue_type == "Booking":
+        prompt = f"""
+        <prompt>
+            <question>{user_prompt}</question>
+            <context>
+                The user has multiple booking inquiries. Here are the details:
+                {context_data}
+            </context>
+            <expected_response>
+                A comprehensive response is generated based on the context data, addressing all booking inquiries.
+            </expected_response>
+        </prompt>
+        """
+    elif issue_type == "Service Question":
+        prompt = f"""
+        <prompt>
+            <question>{user_prompt}</question>
+            <context>
+                The user has multiple service questions. Here are the details:
+                {context_data}
+            </context>
+            <expected_response>
+                A comprehensive response is generated based on the context data, addressing all service questions.
+            </expected_response>
+        </prompt>
+        """
+    else:
+        return "I'm sorry, I couldn't identify your request. Please provide more details."
 
-def agent_text_assistant_referee(answer: str):
-    prompt = f"""
-    <prompt>
-        <question>{answer}</question>
-        <context>Validate the generated response to ensure it meets the expected criteria.</context>
-        <expected_response>The response is validated as correct or incorrect.</expected_response>
-    </prompt>
-    """
-    return prompt
+    response = get_mistral_completion(prompt)
+    
+    return response
+
+def agent_text_assistant_referee(user_prompt: str, context_data: str, answer: str):
+     # Cargar un modelo de NLP preentrenado para análisis de texto
+    nlp = pipeline("question-answering")
+
+    # Usar el modelo para obtener una respuesta basada en el contexto y el prompt
+    result = nlp(question=user_prompt, context=context_data)
+    generated_answer = result['answer'].strip().lower()
+    provided_answer = answer.strip().lower()
+
+    # Calcular la similitud de coseno entre las respuestas
+    vectorizer = TfidfVectorizer().fit_transform([generated_answer, provided_answer])
+    vectors = vectorizer.toarray()
+    similarity = cosine_similarity([vectors[0]], [vectors[1]])[0][0]
+
+    # Devolver True si la similitud es mayor al 90%
+    return similarity >= 0.9
 
 def agent_refactor_promp(user_prompt: str, answer: str):
     prompt = f"""
@@ -286,7 +356,10 @@ def agent_refactor_promp(user_prompt: str, answer: str):
         <expected_response>The user prompt is refactored to improve the response generation.</expected_response>
     </prompt>
     """
-    return prompt
+    
+    response = get_mistral_completion(prompt)
+    
+    return response
 
 
 
