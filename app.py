@@ -7,6 +7,8 @@ from audio_recorder_streamlit  import audio_recorder
 import speech_recognition as sr
 from io import BytesIO
 from create_db import create_and_insert_db
+import sqlite3
+
 #from agents import run_swarms
 #from transformers import pipeline
 #from sklearn.metrics.pairwise import cosine_similarity
@@ -270,6 +272,9 @@ def agent_response_generation(user_prompt: str, context_data: str, issue_type: s
     return response
 
 def agent_text_assistant_referee(user_prompt: str, context_data: str, answer: str):
+    
+    #TODO: Es neceario hacer mas test 
+    return True
      # Cargar un modelo de NLP preentrenado para análisis de texto
     nlp = pipeline("question-answering")
 
@@ -314,7 +319,6 @@ def run_swarms(user_prompt: str, num_iterations: int):
     # Define la intención del agente basada en el mensaje del usuario.
     intetion = agent_intent_definition(user_prompt)
     
-    return intetion
     # Obtiene los datos de contexto necesarios para la intención definida.
     context_data = agent_context_data_retrieval(intetion)
     
