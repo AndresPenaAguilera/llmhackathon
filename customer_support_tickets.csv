@@ -1,6 +1,6 @@
 Client,Ticket Number,Issue Type,Description
 Andres,1,Booking,Inquiry about booking a tour guide for a city tour.
-Andres,2,Booking,Request to change the booking date for a tour guide. It was accepted
+Andres,2,Booking,Request to change the booking date for a tour guide. It was accepted.
 Andres,3,Service Question,Question about the qualifications of the tour guides.
 Andres,4,Service Question,Inquiry about the languages spoken by the tour guides.
 Andres,5,Booking,Request for a refund for a canceled booking.
