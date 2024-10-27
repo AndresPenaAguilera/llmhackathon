@@ -1,0 +1,21 @@
+Client,Ticket Number,Issue Type,Description
+Andres,1,Booking,Inquiry about booking a tour guide for a city tour.
+Andres,2,Booking,Request to change the booking date for a tour guide.
+Andres,3,Service Question,Question about the qualifications of the tour guides.
+Andres,4,Service Question,Inquiry about the languages spoken by the tour guides.
+Andres,5,Booking,Request for a refund for a canceled booking.
+CodeGPT,1,Booking,Inquiry about booking a tour guide for a museum visit.
+CodeGPT,2,Booking,Request to extend the booking duration for a tour guide.
+CodeGPT,3,Service Question,Question about the availability of tour guides on weekends.
+CodeGPT,4,Service Question,Inquiry about the safety measures taken by tour guides.
+CodeGPT,5,Booking,Request for a discount on bulk bookings of tour guides.
+GuruSup,1,Booking,Inquiry about booking a tour guide for a hiking trip.
+GuruSup,2,Booking,Request to change the meeting point for a booked tour guide.
+GuruSup,3,Service Question,Question about the experience level of the tour guides.
+GuruSup,4,Service Question,Inquiry about the insurance coverage for tours.
+GuruSup,5,Booking,Request for an invoice for a completed booking.
+Mistral,1,Booking,Inquiry about booking a tour guide for a wine tasting event.
+Mistral,2,Booking,Request to add an additional person to an existing booking.
+Mistral,3,Service Question,Question about the cancellation policy for bookings.
+Mistral,4,Service Question,Inquiry about the payment methods accepted for bookings.
+Mistral,5,Booking,Request for a special arrangement for a VIP client.
