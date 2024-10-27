@@ -4,9 +4,9 @@
 
 `run_swarms` es una función que ejecuta un proceso iterativo para generar y validar respuestas basadas en la intención del usuario. Este proceso se repite hasta que se obtiene una respuesta válida o se alcanza un número máximo de iteraciones.
 
-## Diagrama de Flujo
+## Diagrama idea principal
 
-!Diagrama de Flujo
+![Main idea](img/main_arquitecture.jpg)
 
 ## Arquitectura del Sistema
 
