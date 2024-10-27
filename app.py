@@ -374,19 +374,12 @@ def process_user_prompt(user_prompt: str):
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             full_response = ""
-            
-            if st.session_state['provider'] == 'CodeGPT':
-                response = run_swarms(user_prompt, 0)#get_agent_completion(st.session_state['selected_agent']['id'], user_prompt)
-                # Simular streaming para CodeGPT
-                for chunk in stream_str(response):
-                    full_response += chunk
-                    message_placeholder.markdown(full_response + "▌")
-            else:  # Mistral
-                response = run_swarms(user_prompt, 0)#get_mistral_completion(user_prompt)
-                # Simular streaming
-                for chunk in stream_str(response):
-                    full_response += chunk
-                    message_placeholder.markdown(full_response + "▌")
+           
+            response = run_swarms(user_prompt, 0)#get_agent_completion(st.session_state['selected_agent']['id'], user_prompt)
+            # Simular streaming para CodeGPT
+            for chunk in stream_str(response):
+                full_response += chunk
+                message_placeholder.markdown(full_response + "▌")
 
             message_placeholder.markdown(full_response)
             st.session_state['messages'].append({"role": "assistant", "content": full_response})
