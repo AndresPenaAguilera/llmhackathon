@@ -3,6 +3,9 @@ import requests
 import json
 from mistralai import Mistral
 import time
+from audio_recorder_streamlit  import audio_recorder
+import speech_recognition as sr
+from io import BytesIO
 
 # Function to stream a string with a delay
 def stream_str(s, speed=250):
@@ -105,8 +108,28 @@ def get_mistral_completion(prompt: str):
     )
     return chat_response.choices[0].message.content
 
+def get_text_audio():
+    text = None
+    audio = audio_recorder()
+    if audio:
+            st.audio(audio, format="audio/wav")
+            
+            audio_bytes = BytesIO(audio)
+            
+            recognizer = sr.Recognizer()
+            
+            with sr.AudioFile(audio_bytes) as source:
+                audio_data = recognizer.record(source)
+            
+                if not audio_data.frame_data.strip(b'\x00'):
+                    return None
+                
+                text = recognizer.recognize_google(audio_data, language="es-ES")
+    
+    return text
+    
 # Interfaz principal
-st.title('LLMHackathon')
+st.title('JustAsk')
 if st.button("Reset Chat"):
     reset_chat()
 
@@ -138,7 +161,14 @@ if (st.session_state['provider'] == 'CodeGPT' and st.session_state['selected_age
         with st.chat_message("user" if message['role'] == "user" else "assistant"):
             st.write(message['content'])
 
-    user_prompt = st.chat_input("Say something")
+    text_audio = get_text_audio()
+   
+    if text_audio:
+        user_prompt = st.chat_input("Say something")
+        st.write("No se grabó ningún audio")
+    else:
+        user_prompt = text_audio
+
     if user_prompt:
         # Mostrar mensaje del usuario
         st.session_state['messages'].append({"role": "user", "content": user_prompt})
@@ -152,6 +182,8 @@ if (st.session_state['provider'] == 'CodeGPT' and st.session_state['selected_age
             
             if st.session_state['provider'] == 'CodeGPT':
                 response = get_agent_completion(st.session_state['selected_agent']['id'], user_prompt)
+                
+                
                 # Simular streaming para CodeGPT
                 for chunk in stream_str(response):
                     full_response += chunk
@@ -165,3 +197,5 @@ if (st.session_state['provider'] == 'CodeGPT' and st.session_state['selected_age
 
             message_placeholder.markdown(full_response)
             st.session_state['messages'].append({"role": "assistant", "content": full_response})
+
+    
